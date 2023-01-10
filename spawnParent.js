@@ -15,24 +15,21 @@ try {
   const { SECRET } = process.env
 
   const filePath = resolve(process.cwd(), process.argv[2])
-  const { publicKey, privateKey } = createKeyPair(SECRET)
-
-  const child = spawn('node', ['./spawnChild.js'], { stdio: ['ipc'] })
-
-  child.send(`${JSON.stringify({ publicKey })}`)
-
   const fileContent = readFileSync(filePath, 'utf-8')
   const fileObject = {
     fileName: basename(filePath),
     content: fileContent,
   }
 
+  const { publicKey, privateKey } = createKeyPair(SECRET)
   const signature = signFile(privateKey, SECRET, JSON.stringify(fileObject))
 
-  child.send(`${JSON.stringify(fileObject)}`)
+  const child = spawn('node', ['./spawnChild.js'])
 
-  child.on('message', (message) => {
-    const decrypted = decryptFile(privateKey, SECRET, Buffer.from(message))
+  child.stdin.write(JSON.stringify({ publicKey, fileObject }))
+
+  child.stdout.on('data', (data) => {
+    const decrypted = decryptFile(privateKey, SECRET, Buffer.from(data))
     const isVerified = verifyFile(publicKey, decrypted.toString(), signature)
     const { fileName, content } = JSON.parse(decrypted)
     console.table([{
@@ -40,12 +37,12 @@ try {
       content,
       isVerified,
       process_elapsed_time: process.uptime(),
-      heapUsed: process.memoryUsage().heapUsed,
+      memory_consumed: process.memoryUsage().external,
     }])
     process.exit()
   })
 
-  process.stderr.on('data', (data) => {
+  child.stderr.on('data', (data) => {
     console.error(data.message)
   })
 } catch (error) {
