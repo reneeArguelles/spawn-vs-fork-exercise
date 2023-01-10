@@ -35,13 +35,13 @@ try {
     const decrypted = decryptFile(privateKey, SECRET, Buffer.from(message))
     const isVerified = verifyFile(publicKey, decrypted.toString(), signature)
     const { fileName, content } = JSON.parse(decrypted)
-    console.table({
+    console.table([{
       fileName,
       content,
       isVerified,
       process_elapsed_time: process.uptime(),
       heapUsed: process.memoryUsage().heapUsed,
-    })
+    }])
     process.exit()
   })
 
