@@ -15,21 +15,18 @@ try {
   const { SECRET } = process.env
 
   const filePath = resolve(process.cwd(), process.argv[2])
-  const { publicKey, privateKey } = createKeyPair(SECRET)
-
-  const child = fork('./forkChild.js')
-
-  child.send(`${JSON.stringify({ publicKey })}`)
-
   const fileContent = readFileSync(filePath, 'utf-8')
   const fileObject = {
     fileName: basename(filePath),
     content: fileContent,
   }
 
+  const { publicKey, privateKey } = createKeyPair(SECRET)
   const signature = signFile(privateKey, SECRET, JSON.stringify(fileObject))
 
-  child.send(`${JSON.stringify(fileObject)}`)
+  const child = fork('./forkChild.js')
+
+  child.send(JSON.stringify({ publicKey, fileObject }))
 
   child.on('message', (message) => {
     const decrypted = decryptFile(privateKey, SECRET, Buffer.from(message))
@@ -40,7 +37,7 @@ try {
       content,
       isVerified,
       process_elapsed_time: process.uptime(),
-      heapUsed: process.memoryUsage().heapUsed,
+      heapUsed: process.memoryUsage().external,
     }])
     process.exit()
   })
