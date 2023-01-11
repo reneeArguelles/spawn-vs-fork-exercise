@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { freemem } from 'node:os'
 import { resolve, basename } from 'node:path'
 import dotenv from 'dotenv'
 import {
@@ -24,6 +25,8 @@ try {
   const { publicKey, privateKey } = createKeyPair(SECRET)
   const signature = signFile(privateKey, SECRET, JSON.stringify(fileObject))
 
+  const initialFreeMemory = freemem()
+
   const child = spawn('node', ['./spawnChild.js'])
 
   child.stdin.write(JSON.stringify({ publicKey, fileObject }))
@@ -37,7 +40,7 @@ try {
       content,
       isVerified,
       process_elapsed_time: process.uptime(),
-      memory_consumed: process.memoryUsage().external,
+      memory_consumed: initialFreeMemory - freemem(),
     }])
     process.exit()
   })

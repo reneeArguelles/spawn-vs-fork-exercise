@@ -1,5 +1,6 @@
 import { fork } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { freemem } from 'node:os'
 import { resolve, basename } from 'node:path'
 import dotenv from 'dotenv'
 import {
@@ -24,9 +25,11 @@ try {
   const { publicKey, privateKey } = createKeyPair(SECRET)
   const signature = signFile(privateKey, SECRET, JSON.stringify(fileObject))
 
+  const initialFreeMemory = freemem()
+
   const child = fork('./forkChild.js')
 
-  child.send(JSON.stringify({ publicKey, fileObject }))
+  child.send({ publicKey, fileObject })
 
   child.on('message', (message) => {
     const decrypted = decryptFile(privateKey, SECRET, Buffer.from(message))
@@ -37,8 +40,9 @@ try {
       content,
       isVerified,
       process_elapsed_time: process.uptime(),
-      heapUsed: process.memoryUsage().external,
+      memory_consumed: initialFreeMemory - freemem(),
     }])
+    child.kill()
     process.exit()
   })
 

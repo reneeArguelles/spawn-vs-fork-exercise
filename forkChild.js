@@ -1,7 +1,7 @@
 import { encryptFile } from './lib/cryptoFunctions.js'
 
 process.on('message', (message) => {
-  const { publicKey, fileObject } = JSON.parse(message.toString())
+  const { publicKey, fileObject } = message
   const encrypted = encryptFile(publicKey, Buffer.from(JSON.stringify(fileObject)))
   process.send(encrypted)
 })
